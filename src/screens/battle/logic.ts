@@ -53,37 +53,44 @@ function canFitEachSpotUntilTheEnd(
     spots: BattleLayout[],
 ): [boolean, BattleLayout[]] {
     let canFit = false;
-    for (let i = start; i < end; start > end ? i-- : i++) {
-        let nextX = 0;
-        let nextY = 0;
-        if (coordinateToUpdate === "x") {
-            nextX += start;
-            nextY = otherCoordinate;
-        }
-        if (coordinateToUpdate === "y") {
-            nextY += start;
-            nextY = otherCoordinate;
-        }
-        const spot = spots.find(each => {
-            const [x, y] = each.coordinates;
-            return x === nextX && y === nextY;
-        });
-        if (spot && !spot.shipID) {
-            canFit = true;
-            spot.shipID = 1111;
-            break;
+    console.log("START | END: ", start, end);
+    // 5 - 2
+    const isStartBiggerThanEnd = start > end;
+    if (start > end) {
+        for (let i = start; i > end; i--) {
+            let nextX = 0;
+            let nextY = 0;
+            if (coordinateToUpdate === "x") {
+                nextX += i;
+                nextY = otherCoordinate;
+            }
+            if (coordinateToUpdate === "y") {
+                nextY += i;
+                nextX = otherCoordinate;
+            }
+            console.log("NEXT Y | X: ", nextY, nextX);
+            const spot = spots.find(each => {
+                const [y, x] = each.coordinates;
+                return x === nextX && y === nextY;
+            });
+            if (spot && !spot.shipID) {
+                canFit = true;
+                spot.shipID = 1111;
+            }
         }
     }
     return [canFit, spots];
 }
 
 function canFitToSpot(
-    id: number,
+    spotDetails: { id: number; coordinates: [number, number] },
     size: number,
     direction: DIRECTION,
     spotsToMap: BattleLayout[],
 ): [boolean, BattleLayout[]] {
-    const [y, x] = getCoordinatesFromID(id);
+    const { id, coordinates } = spotDetails;
+    const [y, x] = coordinates;
+
     let finalX = x;
     let finalY = y;
     let canFitToSpot = false;
@@ -134,23 +141,21 @@ export function findRandomEmptySpotForShip(
     shipID: number,
     size: number,
 ): BattleLayout[] {
-    let emptySpots = layout.filter(each => !each.shipID);
-    for (let i = 0; i < emptySpots.length; i += 1) {
-        const emptySpot = emptySpots[i];
-
+    for (let i = 0; i < layout.length; i += 1) {
+        const emptySpot = layout[i];
         const randomDirection = getRandomDirection(shipID, size);
         const [canFit, finalEmptySpots] = canFitToSpot(
-            emptySpot.id,
+            { id: emptySpot.id, coordinates: emptySpot.coordinates },
             size,
             randomDirection,
-            emptySpots,
+            layout,
         );
         if (canFit) {
-            emptySpots = finalEmptySpots;
+            layout = finalEmptySpots;
             break;
         }
     }
-    return emptySpots;
+    return layout;
 }
 
 export function createBattleLayout(): BattleLayout[] {
@@ -161,6 +166,8 @@ export function createBattleLayout(): BattleLayout[] {
     Object.keys(SHIP_TYPES).forEach(key => {
         const value = SHIP_TYPES[key] as { id: number; size: number };
     });
+    layout = findRandomEmptySpotForShip(layout, SHIP_TYPES.submarine.id, SHIP_TYPES.submarine.size);
+    console.log(layout);
     layout = findRandomEmptySpotForShip(
         layout,
         SHIP_TYPES.battleShip.id,

@@ -1,9 +1,10 @@
-import { SHIP_TYPES } from "@screens/battle/index.tsx";
+import { SHIP_TYPES } from "./index.tsx";
 
 export interface BattleLayout {
-    id: number;
+    id: string;
     coordinates: [number, number];
     shipID?: number;
+    isSelected?: boolean;
 }
 
 type DIRECTION = "UP" | "DOWN" | "LEFT" | "RIGHT";
@@ -41,23 +42,40 @@ function getRandomDirection(id: number, size: number): DIRECTION {
     return shuffle(possibleDirections)[0];
 }
 
-function getRandomSpot(emptySpots: any[]) {
-    return shuffle(emptySpots)[0];
-}
-
 function canFitEachSpotUntilTheEnd(
     start: number,
     end: number,
     otherCoordinate: number,
     coordinateToUpdate: "x" | "y",
+    shipID: number,
     spots: BattleLayout[],
 ): [boolean, BattleLayout[]] {
-    let canFit = false;
-    console.log("START | END: ", start, end);
-    // 5 - 2
+    let canFit = true;
     const isStartBiggerThanEnd = start > end;
-    if (start > end) {
-        for (let i = start; i > end; i--) {
+
+    for (let i = start; isStartBiggerThanEnd ? i > end : i < end; isStartBiggerThanEnd ? i-- : i++) {
+        let nextX = 0;
+        let nextY = 0;
+        if (coordinateToUpdate === "x") {
+            nextX += i;
+            nextY = otherCoordinate;
+        }
+        if (coordinateToUpdate === "y") {
+            nextY += i;
+            nextX = otherCoordinate;
+        }
+        const spot = spots.find(each => {
+            const [y, x] = each.coordinates;
+            return x === nextX && y === nextY;
+        });
+        if (spot && spot.shipID) {
+            canFit = false;
+            break;
+        }
+    }
+
+    if (canFit) {
+        for (let i = start; isStartBiggerThanEnd ? i > end : i < end; isStartBiggerThanEnd ? i-- : i++) {
             let nextX = 0;
             let nextY = 0;
             if (coordinateToUpdate === "x") {
@@ -68,60 +86,61 @@ function canFitEachSpotUntilTheEnd(
                 nextY += i;
                 nextX = otherCoordinate;
             }
-            console.log("NEXT Y | X: ", nextY, nextX);
             const spot = spots.find(each => {
                 const [y, x] = each.coordinates;
                 return x === nextX && y === nextY;
             });
             if (spot && !spot.shipID) {
-                canFit = true;
-                spot.shipID = 1111;
+                spot.shipID = shipID;
             }
         }
     }
+
     return [canFit, spots];
 }
 
 function canFitToSpot(
     spotDetails: { id: number; coordinates: [number, number] },
+    shipID: number,
     size: number,
     direction: DIRECTION,
     spotsToMap: BattleLayout[],
 ): [boolean, BattleLayout[]] {
-    const { id, coordinates } = spotDetails;
+    const { coordinates } = spotDetails;
     const [y, x] = coordinates;
 
     let finalX = x;
     let finalY = y;
     let canFitToSpot = false;
+
     if (direction === DIRECTIONS.UP) {
         finalY = y - size;
         if (finalY > eachRowStartingEdge) {
-            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalY, y, x, "y", spotsToMap);
+            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalY, y, x, "y", shipID, spotsToMap);
             canFitToSpot = result;
             spotsToMap = finalSpots;
         }
     }
-    if (direction === DIRECTIONS.DOWN) {
+    if (direction === DIRECTIONS.DOWN && !canFitToSpot) {
         finalY = y + size;
         if (finalY < eachRowEndingEdge) {
-            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalY, y, x, "y", spotsToMap);
+            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalY, y, x, "y", shipID, spotsToMap);
             canFitToSpot = result;
             spotsToMap = finalSpots;
         }
     }
-    if (direction === DIRECTIONS.LEFT) {
+    if (direction === DIRECTIONS.LEFT && !canFitToSpot) {
         finalX = x - size;
         if (finalX < eachRowEndingEdge) {
-            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalX, x, y, "x", spotsToMap);
+            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalX, x, y, "x", shipID, spotsToMap);
             canFitToSpot = result;
             spotsToMap = finalSpots;
         }
     }
-    if (direction === DIRECTIONS.RIGHT) {
+    if (direction === DIRECTIONS.RIGHT && !canFitToSpot) {
         finalX = x + size;
         if (finalX < eachRowEndingEdge) {
-            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalX, x, y, "x", spotsToMap);
+            let [result, finalSpots] = canFitEachSpotUntilTheEnd(finalX, x, y, "x", shipID, spotsToMap);
             canFitToSpot = result;
             spotsToMap = finalSpots;
         }
@@ -136,16 +155,13 @@ function getCoordinatesFromID(id: number): [number, number] {
     return [y, x];
 }
 
-export function findRandomEmptySpotForShip(
-    layout: BattleLayout[],
-    shipID: number,
-    size: number,
-): BattleLayout[] {
+function findRandomEmptySpotForShip(layout: BattleLayout[], shipID: number, size: number): BattleLayout[] {
     for (let i = 0; i < layout.length; i += 1) {
-        const emptySpot = layout[i];
+        const emptySpot = layout[getRandomInt(0, layout.length - 1)]; // to get random spot
         const randomDirection = getRandomDirection(shipID, size);
         const [canFit, finalEmptySpots] = canFitToSpot(
             { id: emptySpot.id, coordinates: emptySpot.coordinates },
+            shipID,
             size,
             randomDirection,
             layout,
@@ -160,19 +176,26 @@ export function findRandomEmptySpotForShip(
 
 export function createBattleLayout(): BattleLayout[] {
     let layout = Array.from({ length: 100 }, (_, i) => ({
-        id: i,
+        id: getRandomStr(),
         coordinates: getCoordinatesFromID(i),
     }));
-    Object.keys(SHIP_TYPES).forEach(key => {
+    Object.keys(SHIP_TYPES).forEach((key: "carrier" | "battleship" | "cruiser" | "submarine" | "destroyer") => {
         const value = SHIP_TYPES[key] as { id: number; size: number };
+        layout = findRandomEmptySpotForShip(layout, value.id, value.size);
     });
-    layout = findRandomEmptySpotForShip(layout, SHIP_TYPES.submarine.id, SHIP_TYPES.submarine.size);
-    console.log(layout);
-    layout = findRandomEmptySpotForShip(
-        layout,
-        SHIP_TYPES.battleShip.id,
-        SHIP_TYPES.battleShip.size,
-    );
     console.log(layout);
     return layout;
+}
+
+function getRandomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomStr() {
+    let str = "";
+    const randomStrings = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S"];
+    for (let i = 0; i < 6; i++) {
+        str += shuffle(randomStrings)[0];
+    }
+    return str + getRandomInt(0, 100);
 }

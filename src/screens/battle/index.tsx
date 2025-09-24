@@ -3,17 +3,12 @@ import { ReactNode, useEffect, useState } from "react";
 
 import { useDeviceOrientation } from "@react-native-community/hooks";
 
-import { BattleLayout, createBattleLayout } from "./logic.ts";
-import BlockItem from "@screens/battle/BlockItem.tsx";
 import { images } from "@assets/index.ts";
 
-export const SHIP_TYPES = {
-    carrier: { id: 1, size: 2, count: 1 },
-    battleship: { id: 2, size: 4, count: 1 },
-    cruiser: { id: 3, size: 3, count: 1 },
-    submarine: { id: 4, size: 3, count: 1 },
-    aircraft: { id: 5, size: 5, count: 1 },
-};
+import BlockItem from "./BlockItem.tsx";
+import { BattleLayout, createBattleLayout } from "./logic.ts";
+import { SHIP_LIST_OBJECT, ShipNames } from "./types.ts";
+import { scaledValue } from "@utils/index.ts";
 
 const Battle = () => {
     const orientation = useDeviceOrientation();
@@ -26,7 +21,7 @@ const Battle = () => {
     }, []);
 
     function setInitialLayout() {
-        setLayout(createBattleLayout());
+        setLayout(createBattleLayout(SHIP_LIST_OBJECT));
     }
 
     function selectSpot(id: string) {
@@ -44,8 +39,8 @@ const Battle = () => {
 
     function renderShips() {
         const shipsToRender: ReactNode[] = [];
-        Object.keys(SHIP_TYPES).forEach(key => {
-            const ship = SHIP_TYPES[key];
+        (Object.keys(SHIP_LIST_OBJECT) as ShipNames[]).forEach(key => {
+            const ship = SHIP_LIST_OBJECT[key];
             const foundLength = layout.filter(each => each.isSelected && each.shipID === ship.id)?.length;
             const shotImages = [];
 
@@ -126,8 +121,8 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     smallHitIcon: {
-        width: 30,
-        height: 30,
+        width: scaledValue(28),
+        height: scaledValue(28),
     },
     flatListColor: {
         borderWidth: 1,

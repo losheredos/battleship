@@ -1,4 +1,12 @@
-import { SHIP_TYPES } from "./index.tsx";
+import {
+    DIRECTION,
+    DIRECTIONS,
+    eachRowEndingEdge,
+    eachRowLength,
+    eachRowStartingEdge,
+    ShipNames,
+    ShipType,
+} from "./types.ts";
 
 export interface BattleLayout {
     id: string;
@@ -7,36 +15,23 @@ export interface BattleLayout {
     isSelected?: boolean;
 }
 
-type DIRECTION = "UP" | "DOWN" | "LEFT" | "RIGHT";
-
-const DIRECTIONS = {
-    UP: "UP",
-    DOWN: "DOWN",
-    RIGHT: "RIGHT",
-    LEFT: "LEFT",
-};
-
-const eachRowLength = 10;
-const eachRowStartingEdge = 0;
-const eachRowEndingEdge = 9;
-
 function shuffle(arr: any[]) {
-    return arr.sort((a, b) => (Math.random() > 0.5 ? -1 : 1));
+    return arr.sort(() => (Math.random() > 0.5 ? -1 : 1));
 }
 
 function getRandomDirection(id: number, size: number): DIRECTION {
     const possibleDirections = [];
-    const [x, y] = getCoordinatesFromID(id);
-    if (y + size < eachRowEndingEdge) {
+    const [y, x] = getCoordinatesFromID(id);
+    if (x + size < eachRowEndingEdge) {
         possibleDirections.push(DIRECTIONS.RIGHT);
     }
-    if (y - size > eachRowStartingEdge) {
+    if (x - size > eachRowStartingEdge) {
         possibleDirections.push(DIRECTIONS.LEFT);
     }
-    if (x + size < eachRowEndingEdge) {
+    if (y + size < eachRowEndingEdge) {
         possibleDirections.push(DIRECTIONS.DOWN);
     }
-    if (x - size > eachRowStartingEdge) {
+    if (y - size > eachRowStartingEdge) {
         possibleDirections.push(DIRECTIONS.UP);
     }
     return shuffle(possibleDirections)[0];
@@ -100,7 +95,7 @@ function canFitEachSpotUntilTheEnd(
 }
 
 function canFitToSpot(
-    spotDetails: { id: number; coordinates: [number, number] },
+    spotDetails: { id: string; coordinates: [number, number] },
     shipID: number,
     size: number,
     direction: DIRECTION,
@@ -150,8 +145,8 @@ function canFitToSpot(
 }
 
 function getCoordinatesFromID(id: number): [number, number] {
-    const x = Math.floor(id / eachRowLength);
-    const y = id % eachRowLength;
+    const y = Math.floor(id / eachRowLength);
+    const x = id % eachRowLength;
     return [y, x];
 }
 
@@ -174,16 +169,17 @@ function findRandomEmptySpotForShip(layout: BattleLayout[], shipID: number, size
     return layout;
 }
 
-export function createBattleLayout(): BattleLayout[] {
+function createBattleLayout(shipList: Record<ShipNames, ShipType>): BattleLayout[] {
     let layout = Array.from({ length: 100 }, (_, i) => ({
         id: getRandomStr(),
         coordinates: getCoordinatesFromID(i),
     }));
-    Object.keys(SHIP_TYPES).forEach((key: "carrier" | "battleship" | "cruiser" | "submarine" | "destroyer") => {
-        const value = SHIP_TYPES[key] as { id: number; size: number };
-        layout = findRandomEmptySpotForShip(layout, value.id, value.size);
+    (Object.keys(shipList) as ShipNames[]).forEach(key => {
+        const value = shipList[key]; // typed as ShipType
+        for (let i = 0; i < value.count; i++) {
+            layout = findRandomEmptySpotForShip(layout, value.id, value.size);
+        }
     });
-    console.log(layout);
     return layout;
 }
 
@@ -199,3 +195,5 @@ function getRandomStr() {
     }
     return str + getRandomInt(0, 100);
 }
+
+export { shuffle, getRandomDirection, getCoordinatesFromID, createBattleLayout };

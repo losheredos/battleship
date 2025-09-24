@@ -8,10 +8,10 @@ interface Props {
     item: BattleLayout;
     onPress: (id: string) => void;
     isDebug?: boolean;
-    isPortrait: "portrait" | "landscape";
+    isPortrait: boolean;
 }
 
-const BlockItem = function BlockItemNonMemoized({ item, onPress, isDebug = false, isPortrait }: Props) {
+const BlockItem = function BlockItemNonMemoized({ item, onPress, isDebug = true, isPortrait }: Props) {
     const { isSelected, shipID } = item;
 
     function getImage() {

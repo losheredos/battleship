@@ -1,10 +1,11 @@
 import { View, FlatList, Image, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { ReactNode, useEffect, useState } from "react";
 
+import { useDeviceOrientation } from "@react-native-community/hooks";
+
 import { BattleLayout, createBattleLayout } from "./logic.ts";
 import BlockItem from "@screens/battle/BlockItem.tsx";
 import { images } from "@assets/index.ts";
-import { is } from "@babel/types";
 
 export const SHIP_TYPES = {
     carrier: { id: 1, size: 2, count: 1 },
@@ -15,9 +16,10 @@ export const SHIP_TYPES = {
 };
 
 const Battle = () => {
+    const orientation = useDeviceOrientation();
     const [layout, setLayout] = useState<BattleLayout[]>([]);
 
-    console.log(layout);
+    const isPortrait = orientation === "portrait";
 
     useEffect(() => {
         setInitialLayout();
@@ -32,12 +34,12 @@ const Battle = () => {
         const itemToModify = newLayout.find(each => each.id === id);
         if (itemToModify) {
             itemToModify.isSelected = true;
+            setLayout(newLayout);
         }
-        setLayout(newLayout);
     }
 
     const _renderItem = ({ item }: { item: BattleLayout }) => {
-        return <BlockItem key={item.id} item={item} onPress={selectSpot} />;
+        return <BlockItem key={item.id} item={item} onPress={selectSpot} isPortrait={isPortrait} />;
     };
 
     function renderShips() {
@@ -73,29 +75,33 @@ const Battle = () => {
                     <Text style={[styles.shipIdText, { color: getShipStatusColor() }]}>
                         ID:{ship.id} ({foundLength}/{ship.size})
                     </Text>
-                    <Image source={images.ships[key]} style={{ width: 100 }} resizeMode="contain" />
+                    <Image source={images.ships[key]} style={styles.shipImage} resizeMode="contain" />
                     {shotImages}
                 </View>,
             );
         });
-        return shipsToRender;
+        return <View style={{ marginLeft: isPortrait ? 5 : 20, marginTop: 6 }}>{shipsToRender}</View>;
     }
 
     return (
         <View style={{ padding: 15 }}>
-            <TouchableOpacity onPress={setInitialLayout} style={{ marginBottom: 5 }}>
-                <Text style={{ color: "red" }}>Restart</Text>
-            </TouchableOpacity>
-            <FlatList
-                ListEmptyComponent={() => <Text>Loading...</Text>}
-                data={layout}
-                renderItem={_renderItem}
-                numColumns={10}
-                scrollEnabled={false}
-                style={styles.flatListContainer}
-                // Can be further optimized with related props
-            />
-            {renderShips()}
+            <View style={{ flexDirection: isPortrait ? "column" : "row" }}>
+                <View>
+                    <TouchableOpacity onPress={setInitialLayout} style={{ marginBottom: 5 }}>
+                        <Text style={{ color: "red" }}>Restart</Text>
+                    </TouchableOpacity>
+                    <FlatList
+                        ListEmptyComponent={() => <Text>Loading...</Text>}
+                        data={layout}
+                        renderItem={_renderItem}
+                        numColumns={10}
+                        contentContainerStyle={styles.flatListColor}
+                        scrollEnabled={false}
+                        // Can be further optimized with related props
+                    />
+                </View>
+                {renderShips()}
+            </View>
         </View>
     );
 };
@@ -106,20 +112,24 @@ const styles = StyleSheet.create({
     shipContainer: {
         flexDirection: "row",
         alignItems: "center",
-        height: 75,
+        height: 74,
     },
     shipIdText: {
-        fontSize: 10,
+        fontSize: 9,
         position: "absolute",
         top: 12,
         left: 0,
         zIndex: 1,
     },
+    shipImage: {
+        width: 125,
+        marginTop: 8,
+    },
     smallHitIcon: {
         width: 30,
         height: 30,
     },
-    flatListContainer: {
+    flatListColor: {
         borderWidth: 1,
         borderColor: "orange",
     },

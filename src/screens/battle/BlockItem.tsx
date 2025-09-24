@@ -2,14 +2,16 @@ import { ImageBackground, Text, TouchableOpacity, StyleSheet } from "react-nativ
 
 import { BattleLayout } from "@screens/battle/logic.ts";
 import { images } from "@assets/index.ts";
+import { scaledValue } from "../../utils";
 
 interface Props {
     item: BattleLayout;
     onPress: (id: string) => void;
     isDebug?: boolean;
+    isPortrait: "portrait" | "landscape";
 }
 
-const BlockItem = function BlockItemNonMemoized({ item, onPress, isDebug = false }: Props) {
+const BlockItem = function BlockItemNonMemoized({ item, onPress, isDebug = false, isPortrait }: Props) {
     const { isSelected, shipID } = item;
 
     function getImage() {
@@ -20,7 +22,10 @@ const BlockItem = function BlockItemNonMemoized({ item, onPress, isDebug = false
 
     return (
         <TouchableOpacity style={styles.container} onPress={() => onPress(item.id)}>
-            <ImageBackground source={getImage()} style={styles.imageContainer}>
+            <ImageBackground
+                source={getImage()}
+                style={isPortrait ? styles.verticalImageContainer : styles.horizontalImageContainer}
+            >
                 {isDebug && <Text style={styles.debugText}>{shipID}</Text>}
             </ImageBackground>
         </TouchableOpacity>
@@ -36,9 +41,13 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    imageContainer: {
-        height: 36,
-        width: 36,
+    horizontalImageContainer: {
+        height: scaledValue(31),
+        width: scaledValue(31),
+    },
+    verticalImageContainer: {
+        height: scaledValue(34.3),
+        width: scaledValue(34.3),
     },
     debugText: {
         fontSize: 9,
